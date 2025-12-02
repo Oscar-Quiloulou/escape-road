@@ -11,13 +11,28 @@ let obstacles = [];
 let stars = 0;
 let level = 1;
 
-// Charger JSON voitures
+// Charger JSON voitures et démarrer le jeu après chargement
 fetch('cars.json')
     .then(res => res.json())
     .then(data => {
         cars = data.cars;
         player.speed = cars[0].speed;
+        startGame();
+    })
+    .catch(err => {
+        console.error("Erreur chargement cars.json", err);
+        // Valeur par défaut si JSON absent
+        cars = [{ color: 'red', speed: 3, destroyObstacleSpeed: 5 }];
+        startGame();
     });
+
+// Fonction pour lancer le jeu
+function startGame() {
+    setInterval(() => {
+        if(Math.random() < 0.03) generateObstacle();
+        update();
+    }, 50);
+}
 
 // Génération obstacles aléatoire
 function generateObstacle() {
@@ -41,6 +56,7 @@ function updatePolice() {
     for(let i=0;i<police.length;i++){
         let p = police[i];
         if(!p.alive) continue;
+
         if(p.x < player.x) p.x += p.speed;
         if(p.x > player.x) p.x -= p.speed;
         if(p.y < player.y) p.y += p.speed;
@@ -67,6 +83,8 @@ function collide(a,b){
 
 // Récupérer voiture actuelle
 function getCurrentCar(){
+    if(!cars || cars.length === 0) return { color: 'red', speed: 3, destroyObstacleSpeed: 5 };
+    if(level-1 >= cars.length) level = cars.length;
     return cars[level-1];
 }
 
@@ -114,9 +132,3 @@ document.addEventListener('keydown', e => {
     if(e.key==='ArrowLeft') player.x -= player.speed;
     if(e.key==='ArrowRight') player.x += player.speed;
 });
-
-// Boucle de jeu
-setInterval(()=>{
-    if(Math.random()<0.03) generateObstacle();
-    update();
-},50);
