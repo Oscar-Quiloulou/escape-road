@@ -13,6 +13,7 @@ let stars = 0;
 const playerImg = new Image(); playerImg.src = "asset/player.png";
 const policeImg = new Image(); policeImg.src = "asset/police.png";
 const explosionImg = new Image(); explosionImg.src = "asset/explosion.png";
+const floorImg = new Image(); floorImg.src = "asset/floor.png";
 
 //--------------------------------------------------
 // PLAYER (monde infini)
@@ -129,8 +130,16 @@ function drawRotatedImage(img, x, y, angle, w, h) {
 }
 
 function draw() {
-    ctx.fillStyle = "#202020";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // background — textured infinite scrolling
+    let tileSize = 512; // taille de floor.png
+    let offsetX = -player.x % tileSize;
+    let offsetY = -player.y % tileSize;
+
+    for (let x = offsetX - tileSize; x < canvas.width; x += tileSize) {
+        for (let y = offsetY - tileSize; y < canvas.height; y += tileSize) {
+            ctx.drawImage(floorImg, x, y, tileSize, tileSize);
+        }
+    }
 
     // player always at center
     drawRotatedImage(playerImg, canvas.width / 2, canvas.height / 2, player.angle, player.width, player.height);
@@ -143,6 +152,7 @@ function draw() {
         else drawRotatedImage(explosionImg, dx, dy, 0, 42, 42);
     });
 
+    // stars counter
     ctx.fillStyle = "yellow";
     ctx.font = "24px Arial";
     ctx.fillText("★ " + stars, 15, 35);
