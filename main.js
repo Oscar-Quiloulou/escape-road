@@ -3,35 +3,29 @@
 //--------------------------------------------------
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
 canvas.width = 900;
 canvas.height = 600;
 
 let keys = {};
 let stars = 0;
 
-// Load images
-const playerImg = new Image();
-playerImg.src = "asset/player.png";
-
-const policeImg = new Image();
-policeImg.src = "asset/police.png";
-
-const explosionImg = new Image();
-explosionImg.src = "asset/explosion.png";
+// load images
+const playerImg = new Image(); playerImg.src = "asset/player.png";
+const policeImg = new Image(); policeImg.src = "asset/police.png";
+const explosionImg = new Image(); explosionImg.src = "asset/explosion.png";
 
 //--------------------------------------------------
-// PLAYER
+// PLAYER (monde infini)
 //--------------------------------------------------
 const player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
+    x: 0,
+    y: 0,
     speed: 0,
     maxSpeed: 6,
     acceleration: 0.2,
     braking: 0.15,
     friction: 0.05,
-    angle: 0,             // rotation angle
+    angle: 0,
     width: 48,
     height: 24
 };
@@ -43,8 +37,8 @@ let policeCars = [];
 
 function spawnPolice() {
     policeCars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
+        x: player.x + (Math.random() * 1800 - 900),
+        y: player.y + (Math.random() * 1200 - 600),
         speed: 0,
         maxSpeed: 5,
         angle: 0,
@@ -54,95 +48,73 @@ function spawnPolice() {
     });
 }
 
-// spawn initial unit
-for (let i = 0; i < 5; i++) spawnPolice();
+// initial police
+for (let i = 0; i < 3; i++) spawnPolice();
 
 //--------------------------------------------------
 // CONTROLS
 //--------------------------------------------------
-document.addEventListener("keydown", e => (keys[e.key] = true));
-document.addEventListener("keyup", e => (keys[e.key] = false));
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
 //--------------------------------------------------
 // UPDATE PLAYER
 //--------------------------------------------------
 function updatePlayer() {
-    // accelerate / brake
     if (keys["ArrowUp"]) player.speed += player.acceleration;
     if (keys["ArrowDown"]) player.speed -= player.braking;
-
-    // turn only while moving
-    if (Math.abs(player.speed) > 0.2) {
+    if (Math.abs(player.speed) > 0.3) {
         if (keys["ArrowLeft"]) player.angle -= 0.06;
         if (keys["ArrowRight"]) player.angle += 0.06;
     }
 
-    // speed limit and friction
     if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
     if (player.speed < -2) player.speed = -2;
-    if (!keys["ArrowUp"] && !keys["ArrowDown"]) {
-        player.speed *= 1 - player.friction;
-    }
+    if (!keys["ArrowUp"] && !keys["ArrowDown"]) player.speed *= 1 - player.friction;
 
-    // apply movement
     player.x += Math.cos(player.angle) * player.speed;
     player.y += Math.sin(player.angle) * player.speed;
-
-    // world wrapping
-    if (player.x < 0) player.x = canvas.width;
-    if (player.x > canvas.width) player.x = 0;
-    if (player.y < 0) player.y = canvas.height;
-    if (player.y > canvas.height) player.y = 0;
 }
 
 //--------------------------------------------------
 // UPDATE POLICE
 //--------------------------------------------------
 function updatePolice() {
-    policeCars.forEach((c1, idx) => {
-        if (c1.destroyed) return;
+    policeCars.forEach(c => {
+        if (c.destroyed) return;
+        let ang = Math.atan2(player.y - c.y, player.x - c.x);
+        c.angle += (ang - c.angle) * 0.08;
 
-        // target angle aiming player
-        let angleToPlayer = Math.atan2(player.y - c1.y, player.x - c1.x);
-        c1.angle += (angleToPlayer - c1.angle) * 0.08;
-
-        // avoid other police collisions
-        policeCars.forEach(c2 => {
-            if (c1 === c2 || c2.destroyed) return;
-            let dist = Math.hypot(c2.x - c1.x, c2.y - c1.y);
-            if (dist < 60) {
-                c1.angle += 0.25; // avoidance steering
+        // avoidance
+        policeCars.forEach(o => {
+            if (c !== o && !o.destroyed) {
+                let d = Math.hypot(o.x - c.x, o.y - c.y);
+                if (d < 70) c.angle += 0.2;
             }
         });
 
-        // acceleration
-        c1.speed += 0.12;
-        if (c1.speed > c1.maxSpeed) c1.speed = c1.maxSpeed;
+        c.speed += 0.12;
+        if (c.speed > c.maxSpeed) c.speed = c.maxSpeed;
 
-        c1.x += Math.cos(c1.angle) * c1.speed;
-        c1.y += Math.sin(c1.angle) * c1.speed;
-
-        // world wrapping
-        if (c1.x < 0) c1.x = canvas.width;
-        if (c1.x > canvas.width) c1.x = 0;
-        if (c1.y < 0) c1.y = canvas.height;
-        if (c1.y > canvas.height) c1.y = 0;
+        c.x += Math.cos(c.angle) * c.speed;
+        c.y += Math.sin(c.angle) * c.speed;
     });
 
-    // collisions police <-> police (only if impact is strong)
+    // collisions police/police (fort choc)
     policeCars.forEach(c1 => policeCars.forEach(c2 => {
         if (c1 === c2 || c1.destroyed || c2.destroyed) return;
-        let dist = Math.hypot(c2.x - c1.x, c2.y - c1.y);
-        if (dist < 28 && (c1.speed + c2.speed) > 8) {
+        let d = Math.hypot(c2.x - c1.x, c2.y - c1.y);
+        if (d < 28 && (c1.speed + c2.speed) > 8) {
             c1.destroyed = true;
             c2.destroyed = true;
             stars++;
         }
     }));
 
-    // maintain minimum police count
+    // intensité police selon étoiles
+    let minPolice = Math.floor(3 + stars * 2.5);
     policeCars = policeCars.filter(c => !c.destroyed);
-    while (policeCars.length < 3) spawnPolice();
+    while (policeCars.length < minPolice) spawnPolice();
 }
 
 //--------------------------------------------------
@@ -160,23 +132,36 @@ function draw() {
     ctx.fillStyle = "#202020";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // player
-    drawRotatedImage(playerImg, player.x, player.y, player.angle, player.width, player.height);
+    // player always at center
+    drawRotatedImage(playerImg, canvas.width / 2, canvas.height / 2, player.angle, player.width, player.height);
 
-    // police
+    // police relative to player
     policeCars.forEach(c => {
-        if (!c.destroyed) drawRotatedImage(policeImg, c.x, c.y, c.angle, c.width, c.height);
-        else drawRotatedImage(explosionImg, c.x, c.y, 0, 42, 42);
+        let dx = c.x - player.x + canvas.width / 2;
+        let dy = c.y - player.y + canvas.height / 2;
+        if (!c.destroyed) drawRotatedImage(policeImg, dx, dy, c.angle, c.width, c.height);
+        else drawRotatedImage(explosionImg, dx, dy, 0, 42, 42);
     });
 
-    // UI
     ctx.fillStyle = "yellow";
     ctx.font = "24px Arial";
     ctx.fillText("★ " + stars, 15, 35);
 }
 
 //--------------------------------------------------
-// MAIN LOOP
+// MOBILE BUTTONS
+//--------------------------------------------------
+function bindMobileButton(id, key) {
+    let b = document.getElementById(id);
+    if (!b) return;
+    b.addEventListener("touchstart", e => { e.preventDefault(); keys[key] = true; });
+    b.addEventListener("touchend", e => { e.preventDefault(); keys[key] = false; });
+}
+bindMobileButton("btnLeft", "ArrowLeft");
+bindMobileButton("btnRight", "ArrowRight");
+bindMobileButton("btnUp", "ArrowUp");
+bindMobileButton("btnDown", "ArrowDown");
+
 //--------------------------------------------------
 function update() {
     updatePlayer();
@@ -184,32 +169,4 @@ function update() {
     draw();
     requestAnimationFrame(update);
 }
-//--------------------------------------------------
-// MOBILE CONTROL SUPPORT
-//--------------------------------------------------
-function bindMobileButton(buttonId, keyName) {
-    const btn = document.getElementById(buttonId);
-    if (!btn) return;
-
-    btn.addEventListener("touchstart", e => {
-        e.preventDefault();
-        keys[keyName] = true;
-    });
-
-    btn.addEventListener("touchend", e => {
-        e.preventDefault();
-        keys[keyName] = false;
-    });
-
-    btn.addEventListener("touchcancel", e => {
-        e.preventDefault();
-        keys[keyName] = false;
-    });
-}
-
-bindMobileButton("btnLeft", "ArrowLeft");
-bindMobileButton("btnRight", "ArrowRight");
-bindMobileButton("btnUp", "ArrowUp");
-bindMobileButton("btnDown", "ArrowDown");
-
 update();
