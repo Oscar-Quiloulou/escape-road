@@ -11,3 +11,52 @@ canvas {
     border: 2px solid white;
     background-color: #222;
 }
+/* --- MOBILE CONTROLS --- */
+#mobileControls {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 12px;
+}
+
+#mobileControls button {
+    width: 70px;
+    height: 70px;
+    border: none;
+    border-radius: 50%;
+    font-size: 32px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    backdrop-filter: blur(6px);
+}
+#mobileControls button:active {
+    background: rgba(255, 255, 0, 0.55);
+}
+@media (max-width: 1000px) {
+    #mobileControls {
+        display: flex;
+    }
+}
+/* --- END MOBILE CONTROLS --- */
+#info {
+    margin-top: 12px;
+    font-size: 18px;
+}
+button {
+    cursor: pointer;
+}
+button:active {
+    background-color: #555;
+}
+button:disabled {
+    background-color: #333;
+    color: #777;
+    cursor: not-allowed;
+}
+button:hover:not(:disabled) {
+    background-color: #444;
+}
+

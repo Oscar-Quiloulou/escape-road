@@ -184,5 +184,32 @@ function update() {
     draw();
     requestAnimationFrame(update);
 }
+//--------------------------------------------------
+// MOBILE CONTROL SUPPORT
+//--------------------------------------------------
+function bindMobileButton(buttonId, keyName) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) return;
+
+    btn.addEventListener("touchstart", e => {
+        e.preventDefault();
+        keys[keyName] = true;
+    });
+
+    btn.addEventListener("touchend", e => {
+        e.preventDefault();
+        keys[keyName] = false;
+    });
+
+    btn.addEventListener("touchcancel", e => {
+        e.preventDefault();
+        keys[keyName] = false;
+    });
+}
+
+bindMobileButton("btnLeft", "ArrowLeft");
+bindMobileButton("btnRight", "ArrowRight");
+bindMobileButton("btnUp", "ArrowUp");
+bindMobileButton("btnDown", "ArrowDown");
 
 update();
