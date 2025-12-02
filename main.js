@@ -1,209 +1,188 @@
-// === CANVAS ===
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+//--------------------------------------------------
+// CONFIG
+//--------------------------------------------------
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-// === CONSTANTES TAILLE ===
-const PLAYER_WIDTH = 50;  // largeur de la voiture
-const PLAYER_HEIGHT = 30; // longueur de la voiture
-const POLICE_SIZE = 40;
-const STAR_SIZE = 25;
-const OBSTACLE_WIDTH = 50;
-const OBSTACLE_HEIGHT = 20;
+canvas.width = 900;
+canvas.height = 600;
 
-// === VARIABLES JEU ===
-let cars = [];
-let player = {
-    x: 400,
-    y: 500,
-    width: PLAYER_WIDTH,
-    height: PLAYER_HEIGHT,
-    speed: 0,
-    angle: 0,
-    maxSpeed: 5,
-    acceleration: 0.2,
-    deceleration: 0.1
-};
-let police = [
-    { x: 200, y: 100, size: POLICE_SIZE, speed: 2, alive: true },
-    { x: 600, y: 100, size: POLICE_SIZE, speed: 2, alive: true }
-];
-let obstacles = [];
-let items = [];
-let stars = 0;
-let level = 1;
-
-// === CHARGER IMAGES ===
-const imgPlayer = new Image();
-imgPlayer.src = 'assets/player.png';
-const imgPolice = new Image();
-imgPolice.src = 'assets/police.png';
-const imgStar = new Image();
-imgStar.src = 'assets/star.png';
-
-// === GESTION TOUCHES ===
 let keys = {};
-document.addEventListener('keydown', e => { keys[e.key] = true; });
-document.addEventListener('keyup', e => { keys[e.key] = false; });
+let stars = 0;
 
-// === CHARGER JSON VOITURES ===
-fetch('cars.json')
-    .then(res => res.json())
-    .then(data => {
-        cars = data.cars;
-        player.maxSpeed = cars[0].speed;
-        startGame();
-    })
-    .catch(err => {
-        console.error("Erreur chargement cars.json", err);
-        cars = [{ color: 'red', speed: 3, destroyObstacleSpeed: 5 }];
-        startGame();
+// Load images
+const playerImg = new Image();
+playerImg.src = "asset/player.png";
+
+const policeImg = new Image();
+policeImg.src = "asset/police.png";
+
+const explosionImg = new Image();
+explosionImg.src = "asset/explosion.png";
+
+//--------------------------------------------------
+// PLAYER
+//--------------------------------------------------
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    speed: 0,
+    maxSpeed: 6,
+    acceleration: 0.2,
+    braking: 0.15,
+    friction: 0.05,
+    angle: 0,             // rotation angle
+    width: 48,
+    height: 24
+};
+
+//--------------------------------------------------
+// POLICE
+//--------------------------------------------------
+let policeCars = [];
+
+function spawnPolice() {
+    policeCars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        speed: 0,
+        maxSpeed: 5,
+        angle: 0,
+        width: 48,
+        height: 24,
+        destroyed: false
     });
-
-// === DEMARRER JEU ===
-function startGame() {
-    setInterval(() => {
-        if (Math.random() < 0.03) generateObstacle();
-        if (Math.random() < 0.02) generateItem();
-        update();
-    }, 50);
 }
 
-// === GENERER OBSTACLES ===
-function generateObstacle() {
-    const x = Math.random() * (canvas.width - OBSTACLE_WIDTH);
-    const y = -OBSTACLE_HEIGHT;
-    obstacles.push({ x, y, width: OBSTACLE_WIDTH, height: OBSTACLE_HEIGHT });
-}
+// spawn initial unit
+for (let i = 0; i < 5; i++) spawnPolice();
 
-// === GENERER ÉTOILES ===
-function generateItem() {
-    const x = Math.random() * (canvas.width - STAR_SIZE);
-    const y = -STAR_SIZE;
-    items.push({ x, y, size: STAR_SIZE, type: 'star' });
-}
+//--------------------------------------------------
+// CONTROLS
+//--------------------------------------------------
+document.addEventListener("keydown", e => (keys[e.key] = true));
+document.addEventListener("keyup", e => (keys[e.key] = false));
 
-// === DETECTION COLLISION OBSTACLE ===
-function checkObstacleCollision(o) {
-    const hit = player.x < o.x + o.width && player.x + player.width > o.x &&
-                player.y < o.y + o.height && player.y + player.height > o.y;
-    if (hit && player.speed >= getCurrentCar().destroyObstacleSpeed) {
-        return true; // obstacle détruit
-    }
-    return false;
-}
+//--------------------------------------------------
+// UPDATE PLAYER
+//--------------------------------------------------
+function updatePlayer() {
+    // accelerate / brake
+    if (keys["ArrowUp"]) player.speed += player.acceleration;
+    if (keys["ArrowDown"]) player.speed -= player.braking;
 
-// === UPDATE POLICE ===
-function updatePolice() {
-    for (let i = 0; i < police.length; i++) {
-        let p = police[i];
-        if (!p.alive) continue;
-
-        if (p.x < player.x) p.x += p.speed;
-        if (p.x > player.x) p.x -= p.speed;
-        if (p.y < player.y) p.y += p.speed;
-        if (p.y > player.y) p.y -= p.speed;
-
-        // collision entre police
-        for (let j = i + 1; j < police.length; j++) {
-            let q = police[j];
-            if (!q.alive) continue;
-            if (collide(p, q)) {
-                p.alive = false;
-                q.alive = false;
-                console.log("Police détruite !");
-            }
-        }
-    }
-}
-
-// === COLLISION GENERALE ===
-function collide(a, b) {
-    return a.x < b.x + b.size && a.x + a.size > b.x &&
-           a.y < b.y + b.size && a.y + a.size > b.y;
-}
-
-// === VOITURE ACTUELLE ===
-function getCurrentCar() {
-    if (!cars || cars.length === 0) return { color: 'red', speed: 3, destroyObstacleSpeed: 5 };
-    if (level - 1 >= cars.length) level = cars.length;
-    return cars[level - 1];
-}
-
-// === MONTER NIVEAU ===
-function levelUp() {
-    level += 1;
-    player.maxSpeed = getCurrentCar().speed;
-    console.log("Nouveau niveau ! Voiture plus rapide !");
-}
-
-// === UPDATE JEU ===
-function update() {
-    // === CONTROLES VEHICULE ===
-    if (keys['ArrowLeft']) player.angle -= 0.05;
-    if (keys['ArrowRight']) player.angle += 0.05;
-
-    if (keys['ArrowUp']) {
-        player.speed += player.acceleration;
-        if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
-    } else if (keys['ArrowDown']) {
-        player.speed -= player.acceleration;
-        if (player.speed < -player.maxSpeed / 2) player.speed = -player.maxSpeed / 2;
-    } else {
-        // Décélération naturelle
-        if (player.speed > 0) player.speed -= player.deceleration;
-        if (player.speed < 0) player.speed += player.deceleration;
+    // turn only while moving
+    if (Math.abs(player.speed) > 0.2) {
+        if (keys["ArrowLeft"]) player.angle -= 0.06;
+        if (keys["ArrowRight"]) player.angle += 0.06;
     }
 
-    // Déplacement selon angle
+    // speed limit and friction
+    if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
+    if (player.speed < -2) player.speed = -2;
+    if (!keys["ArrowUp"] && !keys["ArrowDown"]) {
+        player.speed *= 1 - player.friction;
+    }
+
+    // apply movement
     player.x += Math.cos(player.angle) * player.speed;
     player.y += Math.sin(player.angle) * player.speed;
 
-    // === COLLISION OBSTACLES ===
-    obstacles = obstacles.filter(o => !checkObstacleCollision(o));
-
-    // === POLICE ===
-    updatePolice();
-
-    // === COLLISION ÉTOILES ===
-    items = items.filter(i => {
-        const hit = player.x < i.x + i.size && player.x + player.width > i.x &&
-                    player.y < i.y + i.size && player.y + player.height > i.y;
-        if (hit) {
-            stars += 1;
-            if (stars % 5 === 0) levelUp();
-        }
-        return !hit;
-    });
-
-    draw();
+    // world wrapping
+    if (player.x < 0) player.x = canvas.width;
+    if (player.x > canvas.width) player.x = 0;
+    if (player.y < 0) player.y = canvas.height;
+    if (player.y > canvas.height) player.y = 0;
 }
 
-// === DESSIN ===
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+//--------------------------------------------------
+// UPDATE POLICE
+//--------------------------------------------------
+function updatePolice() {
+    policeCars.forEach((c1, idx) => {
+        if (c1.destroyed) return;
 
-    // obstacles
-    ctx.fillStyle = 'gray';
-    obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.width, o.height));
+        // target angle aiming player
+        let angleToPlayer = Math.atan2(player.y - c1.y, player.x - c1.x);
+        c1.angle += (angleToPlayer - c1.angle) * 0.08;
 
-    // étoiles
-    items.forEach(i => {
-        if (i.type === 'star') ctx.drawImage(imgStar, i.x, i.y, STAR_SIZE, STAR_SIZE);
+        // avoid other police collisions
+        policeCars.forEach(c2 => {
+            if (c1 === c2 || c2.destroyed) return;
+            let dist = Math.hypot(c2.x - c1.x, c2.y - c1.y);
+            if (dist < 60) {
+                c1.angle += 0.25; // avoidance steering
+            }
+        });
+
+        // acceleration
+        c1.speed += 0.12;
+        if (c1.speed > c1.maxSpeed) c1.speed = c1.maxSpeed;
+
+        c1.x += Math.cos(c1.angle) * c1.speed;
+        c1.y += Math.sin(c1.angle) * c1.speed;
+
+        // world wrapping
+        if (c1.x < 0) c1.x = canvas.width;
+        if (c1.x > canvas.width) c1.x = 0;
+        if (c1.y < 0) c1.y = canvas.height;
+        if (c1.y > canvas.height) c1.y = 0;
     });
 
-    // joueur avec rotation
+    // collisions police <-> police (only if impact is strong)
+    policeCars.forEach(c1 => policeCars.forEach(c2 => {
+        if (c1 === c2 || c1.destroyed || c2.destroyed) return;
+        let dist = Math.hypot(c2.x - c1.x, c2.y - c1.y);
+        if (dist < 28 && (c1.speed + c2.speed) > 8) {
+            c1.destroyed = true;
+            c2.destroyed = true;
+            stars++;
+        }
+    }));
+
+    // maintain minimum police count
+    policeCars = policeCars.filter(c => !c.destroyed);
+    while (policeCars.length < 3) spawnPolice();
+}
+
+//--------------------------------------------------
+// DRAW
+//--------------------------------------------------
+function drawRotatedImage(img, x, y, angle, w, h) {
     ctx.save();
-    ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
-    ctx.rotate(player.angle);
-    ctx.drawImage(imgPlayer, -player.width / 2, -player.height / 2, player.width, player.height);
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
     ctx.restore();
+}
+
+function draw() {
+    ctx.fillStyle = "#202020";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // player
+    drawRotatedImage(playerImg, player.x, player.y, player.angle, player.width, player.height);
 
     // police
-    police.forEach(p => {
-        if (p.alive) ctx.drawImage(imgPolice, p.x, p.y, POLICE_SIZE, POLICE_SIZE);
+    policeCars.forEach(c => {
+        if (!c.destroyed) drawRotatedImage(policeImg, c.x, c.y, c.angle, c.width, c.height);
+        else drawRotatedImage(explosionImg, c.x, c.y, 0, 42, 42);
     });
 
-    // infos
-    ctx.fillStyle = 'white';
-    ctx.fillText(`Étoiles: ${stars} | Niveau: ${level}`, 10, 20);
+    // UI
+    ctx.fillStyle = "yellow";
+    ctx.font = "24px Arial";
+    ctx.fillText("★ " + stars, 15, 35);
 }
+
+//--------------------------------------------------
+// MAIN LOOP
+//--------------------------------------------------
+function update() {
+    updatePlayer();
+    updatePolice();
+    draw();
+    requestAnimationFrame(update);
+}
+
+update();
