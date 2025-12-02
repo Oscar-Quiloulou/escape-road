@@ -36,21 +36,27 @@ const player = {
 //--------------------------------------------------
 let policeCars = [];
 
-function spawnPolice() {
+// spawn police at random world positions
+function spawnPoliceAt(x, y) {
     policeCars.push({
-        x: player.x + (Math.random() * 1800 - 900),
-        y: player.y + (Math.random() * 1200 - 600),
+        x: x,
+        y: y,
         speed: 0,
         maxSpeed: 5,
-        angle: 0,
+        angle: Math.random() * Math.PI * 2,
         width: 48,
         height: 24,
         destroyed: false
     });
 }
 
-// initial police
-for (let i = 0; i < 3; i++) spawnPolice();
+// initial police (world coordinates around player)
+for (let i = 0; i < 5; i++) {
+    spawnPoliceAt(
+        player.x + Math.random() * 2000 - 1000,
+        player.y + Math.random() * 2000 - 1000
+    );
+}
 
 //--------------------------------------------------
 // CONTROLS
@@ -83,17 +89,20 @@ function updatePlayer() {
 function updatePolice() {
     policeCars.forEach(c => {
         if (c.destroyed) return;
+
+        // direction vers le joueur
         let ang = Math.atan2(player.y - c.y, player.x - c.x);
         c.angle += (ang - c.angle) * 0.08;
 
-        // avoidance
+        // avoidance police <-> police
         policeCars.forEach(o => {
             if (c !== o && !o.destroyed) {
                 let d = Math.hypot(o.x - c.x, o.y - c.y);
-                if (d < 70) c.angle += 0.2;
+                if (d < 70) c.angle += 0.2; // évite collision
             }
         });
 
+        // mouvement
         c.speed += 0.12;
         if (c.speed > c.maxSpeed) c.speed = c.maxSpeed;
 
@@ -101,7 +110,7 @@ function updatePolice() {
         c.y += Math.sin(c.angle) * c.speed;
     });
 
-    // collisions police/police (fort choc)
+    // collisions police/police
     policeCars.forEach(c1 => policeCars.forEach(c2 => {
         if (c1 === c2 || c1.destroyed || c2.destroyed) return;
         let d = Math.hypot(c2.x - c1.x, c2.y - c1.y);
@@ -112,10 +121,16 @@ function updatePolice() {
         }
     }));
 
-    // intensité police selon étoiles
+    // minimum police selon étoiles
     let minPolice = Math.floor(3 + stars * 2.5);
-    policeCars = policeCars.filter(c => !c.destroyed);
-    while (policeCars.length < minPolice) spawnPolice();
+
+    // ajouter de nouvelles voitures si nécessaire
+    while (policeCars.filter(c => !c.destroyed).length < minPolice) {
+        spawnPoliceAt(
+            player.x + Math.random() * 2000 - 1000,
+            player.y + Math.random() * 2000 - 1000
+        );
+    }
 }
 
 //--------------------------------------------------
@@ -130,8 +145,8 @@ function drawRotatedImage(img, x, y, angle, w, h) {
 }
 
 function draw() {
-    // background — textured infinite scrolling
-    let tileSize = 512; // taille de floor.png
+    // background : infinite tiling
+    let tileSize = 512;
     let offsetX = -player.x % tileSize;
     let offsetY = -player.y % tileSize;
 
@@ -141,10 +156,10 @@ function draw() {
         }
     }
 
-    // player always at center
+    // player toujours au centre
     drawRotatedImage(playerImg, canvas.width / 2, canvas.height / 2, player.angle, player.width, player.height);
 
-    // police relative to player
+    // police relative au joueur
     policeCars.forEach(c => {
         let dx = c.x - player.x + canvas.width / 2;
         let dy = c.y - player.y + canvas.height / 2;
@@ -152,7 +167,7 @@ function draw() {
         else drawRotatedImage(explosionImg, dx, dy, 0, 42, 42);
     });
 
-    // stars counter
+    // UI stars
     ctx.fillStyle = "yellow";
     ctx.font = "24px Arial";
     ctx.fillText("★ " + stars, 15, 35);
@@ -172,6 +187,8 @@ bindMobileButton("btnRight", "ArrowRight");
 bindMobileButton("btnUp", "ArrowUp");
 bindMobileButton("btnDown", "ArrowDown");
 
+//--------------------------------------------------
+// MAIN LOOP
 //--------------------------------------------------
 function update() {
     updatePlayer();
