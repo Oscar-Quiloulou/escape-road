@@ -3,15 +3,26 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // === CONSTANTES TAILLE ===
-const PLAYER_SIZE = 40; // joueur
-const POLICE_SIZE = 40; // police
-const STAR_SIZE = 25;   // étoiles
+const PLAYER_WIDTH = 50;  // largeur de la voiture
+const PLAYER_HEIGHT = 30; // longueur de la voiture
+const POLICE_SIZE = 40;
+const STAR_SIZE = 25;
 const OBSTACLE_WIDTH = 50;
 const OBSTACLE_HEIGHT = 20;
 
 // === VARIABLES JEU ===
 let cars = [];
-let player = { x: 400, y: 500, size: PLAYER_SIZE, speed: 3 };
+let player = {
+    x: 400,
+    y: 500,
+    width: PLAYER_WIDTH,
+    height: PLAYER_HEIGHT,
+    speed: 0,
+    angle: 0,
+    maxSpeed: 5,
+    acceleration: 0.2,
+    deceleration: 0.1
+};
 let police = [
     { x: 200, y: 100, size: POLICE_SIZE, speed: 2, alive: true },
     { x: 600, y: 100, size: POLICE_SIZE, speed: 2, alive: true }
@@ -24,19 +35,22 @@ let level = 1;
 // === CHARGER IMAGES ===
 const imgPlayer = new Image();
 imgPlayer.src = 'assets/player.png';
-
 const imgPolice = new Image();
 imgPolice.src = 'assets/police.png';
-
 const imgStar = new Image();
 imgStar.src = 'assets/star.png';
+
+// === GESTION TOUCHES ===
+let keys = {};
+document.addEventListener('keydown', e => { keys[e.key] = true; });
+document.addEventListener('keyup', e => { keys[e.key] = false; });
 
 // === CHARGER JSON VOITURES ===
 fetch('cars.json')
     .then(res => res.json())
     .then(data => {
         cars = data.cars;
-        player.speed = cars[0].speed;
+        player.maxSpeed = cars[0].speed;
         startGame();
     })
     .catch(err => {
@@ -70,8 +84,8 @@ function generateItem() {
 
 // === DETECTION COLLISION OBSTACLE ===
 function checkObstacleCollision(o) {
-    const hit = player.x < o.x + o.width && player.x + player.size > o.x &&
-                player.y < o.y + o.height && player.y + player.size > o.y;
+    const hit = player.x < o.x + o.width && player.x + player.width > o.x &&
+                player.y < o.y + o.height && player.y + player.height > o.y;
     if (hit && player.speed >= getCurrentCar().destroyObstacleSpeed) {
         return true; // obstacle détruit
     }
@@ -118,19 +132,42 @@ function getCurrentCar() {
 // === MONTER NIVEAU ===
 function levelUp() {
     level += 1;
-    player.speed = getCurrentCar().speed;
+    player.maxSpeed = getCurrentCar().speed;
     console.log("Nouveau niveau ! Voiture plus rapide !");
 }
 
 // === UPDATE JEU ===
 function update() {
+    // === CONTROLES VEHICULE ===
+    if (keys['ArrowLeft']) player.angle -= 0.05;
+    if (keys['ArrowRight']) player.angle += 0.05;
+
+    if (keys['ArrowUp']) {
+        player.speed += player.acceleration;
+        if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
+    } else if (keys['ArrowDown']) {
+        player.speed -= player.acceleration;
+        if (player.speed < -player.maxSpeed / 2) player.speed = -player.maxSpeed / 2;
+    } else {
+        // Décélération naturelle
+        if (player.speed > 0) player.speed -= player.deceleration;
+        if (player.speed < 0) player.speed += player.deceleration;
+    }
+
+    // Déplacement selon angle
+    player.x += Math.cos(player.angle) * player.speed;
+    player.y += Math.sin(player.angle) * player.speed;
+
+    // === COLLISION OBSTACLES ===
     obstacles = obstacles.filter(o => !checkObstacleCollision(o));
+
+    // === POLICE ===
     updatePolice();
 
-    // collisions étoiles
+    // === COLLISION ÉTOILES ===
     items = items.filter(i => {
-        const hit = player.x < i.x + i.size && player.x + player.size > i.x &&
-                    player.y < i.y + i.size && player.y + player.size > i.y;
+        const hit = player.x < i.x + i.size && player.x + player.width > i.x &&
+                    player.y < i.y + i.size && player.y + player.height > i.y;
         if (hit) {
             stars += 1;
             if (stars % 5 === 0) levelUp();
@@ -154,8 +191,12 @@ function draw() {
         if (i.type === 'star') ctx.drawImage(imgStar, i.x, i.y, STAR_SIZE, STAR_SIZE);
     });
 
-    // joueur
-    ctx.drawImage(imgPlayer, player.x, player.y, PLAYER_SIZE, PLAYER_SIZE);
+    // joueur avec rotation
+    ctx.save();
+    ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+    ctx.rotate(player.angle);
+    ctx.drawImage(imgPlayer, -player.width / 2, -player.height / 2, player.width, player.height);
+    ctx.restore();
 
     // police
     police.forEach(p => {
@@ -166,11 +207,3 @@ function draw() {
     ctx.fillStyle = 'white';
     ctx.fillText(`Étoiles: ${stars} | Niveau: ${level}`, 10, 20);
 }
-
-// === CONTROLES CLAVIER ===
-document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowUp') player.y -= player.speed;
-    if (e.key === 'ArrowDown') player.y += player.speed;
-    if (e.key === 'ArrowLeft') player.x -= player.speed;
-    if (e.key === 'ArrowRight') player.x += player.speed;
-});
