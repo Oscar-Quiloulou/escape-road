@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compte HugoFrancs</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #fafafa;
+            padding: 20px;
+        }
+        .box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 400px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .add { background: #4caf50; color: white; }
+        .remove { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h1>Compte HF</h1>
+        <p><strong>ID :</strong> <span id="uid"></span></p>
+        <h2>Solde : <span id="balance"></span> HF</h2>
+
+        <button class="add" onclick="updateBalance(10)">+10 HF</button>
+        <button class="add" onclick="updateBalance(50)">+50 HF</button>
+        <button class="add" onclick="updateBalance(100)">+100 HF</button>
+
+        <br><br>
+
+        <button class="remove" onclick="updateBalance(-10)">-10 HF</button>
+        <button class="remove" onclick="updateBalance(-50)">-50 HF</button>
+        <button class="remove" onclick="updateBalance(-100)">-100 HF</button>
+
+        <h3>Historique :</h3>
+        <ul id="history"></ul>
+    </div>
+
+    <script>
+        // Récupération de l'ID depuis l'URL
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+
+        document.getElementById("uid").textContent = id;
+
+        // Chargement DB locale
+        let db = JSON.parse(localStorage.getItem("hf-db") || "{}");
+
+        // Création du compte si inexistant
+        if (!db[id]) {
+            db[id] = { balance: 0, history: [] };
+            saveDB();
+        }
+
+        function saveDB() {
+            localStorage.setItem("hf-db", JSON.stringify(db));
+        }
+
+        function updateBalance(amount) {
+            db[id].balance += amount;
+            db[id].history.push({
+                type: amount > 0 ? "Ajout" : "Retrait",
+                amount: amount,
+                date: new Date().toLocaleString()
+            });
+            saveDB();
+            render();
+        }
+
+        function render() {
+            document.getElementById("balance").textContent = db[id].balance;
+
+            const hist = document.getElementById("history");
+            hist.innerHTML = "";
+
+            db[id].history.slice().reverse().forEach(entry => {
+                const li = document.createElement("li");
+                li.textContent = `${entry.date} — ${entry.type} ${entry.amount} HF`;
+                hist.appendChild(li);
+            });
+        }
+
+        render();
+    </script>
+
+</body>
+</html>

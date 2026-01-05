@@ -1,7 +1,0 @@
-{
-  "cars": [
-    {"level": 1, "speed": 3, "color": "red", "destroyObstacleSpeed": 5},
-    {"level": 2, "speed": 5, "color": "blue", "destroyObstacleSpeed": 7},
-    {"level": 3, "speed": 7, "color": "yellow", "destroyObstacleSpeed": 9}
-  ]
-}

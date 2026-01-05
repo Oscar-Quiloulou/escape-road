@@ -1,20 +1,43 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>Escape Run</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner HugoFrancs</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+        }
+        #reader {
+            width: 300px;
+            margin: auto;
+        }
+    </style>
 </head>
 <body>
-<h1>Escape Run</h1>
-<canvas id="gameCanvas" width="800" height="600"></canvas>
-<p id="info"></p>
-<script src="main.js"></script>
-<div id="mobileControls">
-    <button id="btnLeft">⟲</button>
-    <button id="btnUp">▲</button>
-    <button id="btnRight">⟳</button>
-    <button id="btnDown">▼</button>
-</div>
+
+    <h1>Scanner un QR‑code</h1>
+    <p>Scanne un QR pour ouvrir le compte associé.</p>
+
+    <div id="reader"></div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        const qr = new Html5Qrcode("reader");
+
+        qr.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: 250 },
+            (decoded) => {
+                // Redirection vers la page user
+                window.location.href = "user.html?id=" + encodeURIComponent(decoded);
+            }
+        );
+    </script>
+
 </body>
 </html>

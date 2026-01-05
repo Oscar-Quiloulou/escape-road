@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de QR‑codes HF</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+        }
+        #qrcode {
+            margin-top: 20px;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            margin-left: 5px;
+        }
+        a { display: block; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <h1>Générer un QR‑code HugoFrancs</h1>
+
+    <p>Entre un ID utilisateur (ex: 12345) :</p>
+    <input type="text" id="userId" placeholder="ID utilisateur">
+    <button onclick="generate()">Générer</button>
+
+    <div id="qrcode"></div>
+
+    <a href="index.html">⬅ Retour au scan</a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="js/qr.js"></script>
+
+</body>
+</html>
